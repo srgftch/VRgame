@@ -22,6 +22,8 @@ public class Le_roboto_torso : MonoBehaviour
     private Dictionary<Le_roboto_partes, Transform> attachedParts = new Dictionary<Le_roboto_partes, Transform>();
     private Dictionary<Le_roboto_partes, bool> originalGravityStates = new Dictionary<Le_roboto_partes, bool>();
     private float lastCheckTime;
+    public static event System.Action OnRobotAssembled;
+    private const int TOTAL_REQUIRED_PARTS = 5;
 
     private void Start()
     {
@@ -128,6 +130,7 @@ public class Le_roboto_torso : MonoBehaviour
 
         // Уведомляем часть о присоединении
         part.OnAttachedToTorso(this);
+        CheckVictory();
     }
 
     public void DetachPart(Le_roboto_partes part)
@@ -159,6 +162,15 @@ public class Le_roboto_torso : MonoBehaviour
         part.OnDetachedFromTorso();
         attachedParts.Remove(part);
         originalGravityStates.Remove(part);
+    }
+
+    private void CheckVictory()
+    {
+        if (attachedParts.Count >= TOTAL_REQUIRED_PARTS)
+        {
+            Debug.Log("🎉 Робот собран! Победа!");
+            OnRobotAssembled?.Invoke(); // Уведомляем всех подписчиков
+        }
     }
 
     private void OnTriggerEnter(Collider other)

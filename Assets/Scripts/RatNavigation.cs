@@ -1,4 +1,4 @@
-using UnityEngine;
+п»їusing UnityEngine;
 using System.Collections;
 
 public class RatNavigation : MonoBehaviour
@@ -17,8 +17,10 @@ public class RatNavigation : MonoBehaviour
     public Vector3 returnPosition = Vector3.zero;
     public bool useReturnPoint = true;
     public float returnStoppingDistance = 1f;
-    public bool destroyAfterReturn = true; // НОВОЕ: уничтожать мышь после возврата
-    public float destroyDelay = 0.5f; // Задержка перед уничтожением
+    public bool destroyAfterReturn = true; // РќРћР’РћР•: СѓРЅРёС‡С‚РѕР¶Р°С‚СЊ РјС‹С€СЊ РїРѕСЃР»Рµ РІРѕР·РІСЂР°С‚Р°
+    public float destroyDelay = 0.5f; // Р—Р°РґРµСЂР¶РєР° РїРµСЂРµРґ СѓРЅРёС‡С‚РѕР¶РµРЅРёРµРј
+    [SerializeField] private GameObject corpsePrefab; // РЈРєР°Р¶РёС‚Рµ РїСЂРµС„Р°Р± С‚СЂСѓРїР° РјС‹С€Рё РІ РёРЅСЃРїРµРєС‚РѕСЂРµ
+    private int stunCount = 0;
 
     [Header("Obstacle Avoidance Settings")]
     public float obstacleCheckDistance = 1.5f;
@@ -42,21 +44,21 @@ public class RatNavigation : MonoBehaviour
     private bool hasReachedTarget = false;
     private GameObject carriedObject;
 
-    // Новые переменные для системы возврата
+    // РќРѕРІС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ СЃРёСЃС‚РµРјС‹ РІРѕР·РІСЂР°С‚Р°
     private bool isReturningHome = false;
     private bool hasReturnedHome = false;
     private Vector3 homePosition;
 
-    // Переменные для оглушения
+    // РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РѕРіР»СѓС€РµРЅРёСЏ
     private bool isStunned = false;
     private float stunTimer = 0f;
     private AudioSource audioSource;
 
-    // Переменные для поиска
+    // РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РїРѕРёСЃРєР°
     private float nextSearchTime = 0f;
     public float searchInterval = 0.3f;
 
-    // Переменные для обхода препятствий
+    // РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РѕР±С…РѕРґР° РїСЂРµРїСЏС‚СЃС‚РІРёР№
     private bool isAvoiding = false;
     private Vector3 avoidDirection;
     private float avoidTimer = 0f;
@@ -84,10 +86,10 @@ public class RatNavigation : MonoBehaviour
             CreateCarryPoint();
         }
 
-        // Инициализация точки возврата
+        // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ С‚РѕС‡РєРё РІРѕР·РІСЂР°С‚Р°
         InitializeReturnPoint();
 
-        // Ищем первую цель сразу
+        // РС‰РµРј РїРµСЂРІСѓСЋ С†РµР»СЊ СЃСЂР°Р·Сѓ
         FindNearestTool();
         nextSearchTime = Time.time + searchInterval;
     }
@@ -169,7 +171,7 @@ public class RatNavigation : MonoBehaviour
             return;
         }
 
-        // Если вернулись домой и уничтожились - ничего не делаем
+        // Р•СЃР»Рё РІРµСЂРЅСѓР»РёСЃСЊ РґРѕРјРѕР№ Рё СѓРЅРёС‡С‚РѕР¶РёР»РёСЃСЊ - РЅРёС‡РµРіРѕ РЅРµ РґРµР»Р°РµРј
         if (hasReturnedHome) return;
 
         if (isReturningHome && carriedObject != null)
@@ -381,37 +383,37 @@ public class RatNavigation : MonoBehaviour
         }
     }
 
-    // ИЗМЕНЕНО: Добавлено уничтожение мыши
+    // РР—РњР•РќР•РќРћ: Р”РѕР±Р°РІР»РµРЅРѕ СѓРЅРёС‡С‚РѕР¶РµРЅРёРµ РјС‹С€Рё
     void OnReachedHome()
     {
         if (rb != null) rb.velocity = Vector3.zero;
         hasReturnedHome = true;
         isReturningHome = false;
 
-        // Сначала сбрасываем предмет
+        // РЎРЅР°С‡Р°Р»Р° СЃР±СЂР°СЃС‹РІР°РµРј РїСЂРµРґРјРµС‚
         if (carriedObject != null)
         {
             DropObjectAtHome();
         }
 
-        // Затем уничтожаем мышь, если включена опция
+        // Р—Р°С‚РµРј СѓРЅРёС‡С‚РѕР¶Р°РµРј РјС‹С€СЊ, РµСЃР»Рё РІРєР»СЋС‡РµРЅР° РѕРїС†РёСЏ
         if (destroyAfterReturn)
         {
             StartCoroutine(DestroyRat());
         }
     }
 
-    // НОВЫЙ метод: уничтожение мыши с задержкой
+    // РќРћР’Р«Р™ РјРµС‚РѕРґ: СѓРЅРёС‡С‚РѕР¶РµРЅРёРµ РјС‹С€Рё СЃ Р·Р°РґРµСЂР¶РєРѕР№
     IEnumerator DestroyRat()
     {
-        Debug.Log($"Мышь достигла точки возврата и будет уничтожена через {destroyDelay} сек");
+        Debug.Log($"РњС‹С€СЊ РґРѕСЃС‚РёРіР»Р° С‚РѕС‡РєРё РІРѕР·РІСЂР°С‚Р° Рё Р±СѓРґРµС‚ СѓРЅРёС‡С‚РѕР¶РµРЅР° С‡РµСЂРµР· {destroyDelay} СЃРµРє");
 
-        // Можно добавить эффекты перед уничтожением
-        // Например, анимацию, звук, частицы
+        // РњРѕР¶РЅРѕ РґРѕР±Р°РІРёС‚СЊ СЌС„С„РµРєС‚С‹ РїРµСЂРµРґ СѓРЅРёС‡С‚РѕР¶РµРЅРёРµРј
+        // РќР°РїСЂРёРјРµСЂ, Р°РЅРёРјР°С†РёСЋ, Р·РІСѓРє, С‡Р°СЃС‚РёС†С‹
 
         yield return new WaitForSeconds(destroyDelay);
 
-        // Уничтожаем объект мыши
+        // РЈРЅРёС‡С‚РѕР¶Р°РµРј РѕР±СЉРµРєС‚ РјС‹С€Рё
         Destroy(gameObject);
     }
 
@@ -501,14 +503,14 @@ public class RatNavigation : MonoBehaviour
     {
         if (carriedObject != null)
         {
-            // Без рандомного смещения - кладем аккуратно
+            // Р‘РµР· СЂР°РЅРґРѕРјРЅРѕРіРѕ СЃРјРµС‰РµРЅРёСЏ - РєР»Р°РґРµРј Р°РєРєСѓСЂР°С‚РЅРѕ
             Vector3 dropPosition = homePosition;
 
-            // Проверяем землю под точкой
+            // РџСЂРѕРІРµСЂСЏРµРј Р·РµРјР»СЋ РїРѕРґ С‚РѕС‡РєРѕР№
             RaycastHit hit;
             if (Physics.Raycast(dropPosition + Vector3.up * 2f, Vector3.down, out hit, 5f))
             {
-                dropPosition = hit.point + Vector3.up * 0.05f; // Чуть выше земли
+                dropPosition = hit.point + Vector3.up * 0.05f; // Р§СѓС‚СЊ РІС‹С€Рµ Р·РµРјР»Рё
             }
 
             Rigidbody toolRb = carriedObject.GetComponent<Rigidbody>();
@@ -563,6 +565,16 @@ public class RatNavigation : MonoBehaviour
     {
         if (isStunned) return;
 
+        stunCount++;
+
+        // Р•СЃР»Рё СЌС‚Рѕ РІС‚РѕСЂРѕРµ РѕРіР»СѓС€РµРЅРёРµ вЂ” РїСЂРµРІСЂР°С‰Р°РµРј РІ С‚СЂСѓРї
+        if (stunCount >= 2)
+        {
+            TransformIntoCorpse();
+            return; // РќРµ РїСЂРѕРґРѕР»Р¶Р°РµРј Р»РѕРіРёРєСѓ РѕРіР»СѓС€РµРЅРёСЏ
+        }
+
+        // РРЅР°С‡Рµ вЂ” РѕР±С‹С‡РЅРѕРµ РѕРіР»СѓС€РµРЅРёРµ
         float finalDuration = duration > 0 ? duration : defaultStunDuration;
         isStunned = true;
         stunTimer = finalDuration;
@@ -584,6 +596,29 @@ public class RatNavigation : MonoBehaviour
             audioSource.PlayOneShot(customSound);
         else if (defaultStunSound != null && audioSource != null)
             audioSource.PlayOneShot(defaultStunSound);
+    }
+
+    void TransformIntoCorpse()
+    {
+        Debug.Log("РџСЂРµРІСЂР°С‰РµРЅРёРµ РІ С‚СЂСѓРї: prefab = " + (corpsePrefab != null ? "OK" : "NULL"));
+
+        if (corpsePrefab != null)
+        {
+            GameObject corpse = Instantiate(corpsePrefab, transform.position, transform.rotation);
+            Debug.Log("РўСЂСѓРї СЃРѕР·РґР°РЅ РЅР° РїРѕР·РёС†РёРё: " + corpse.transform.position);
+
+            Rigidbody corpseRb = corpse.GetComponent<Rigidbody>();
+            if (corpseRb != null && rb != null)
+            {
+                corpseRb.velocity = rb.velocity;
+            }
+        }
+        else
+        {
+            Debug.LogError("corpsePrefab РЅРµ РЅР°Р·РЅР°С‡РµРЅ! РўСЂСѓРї РЅРµ СЃРѕР·РґР°РЅ.");
+        }
+
+        Destroy(gameObject);
     }
 
     IEnumerator PlayEffect(ParticleSystem effect)
@@ -620,10 +655,10 @@ public class RatNavigation : MonoBehaviour
             velocity = rb.velocity;
         }
 
-        // Создаем новый объект
+        // РЎРѕР·РґР°РµРј РЅРѕРІС‹Р№ РѕР±СЉРµРєС‚
         GameObject newObject = Instantiate(prefabToUse, position, rotation);
 
-        // Если нужно передать скорость
+        // Р•СЃР»Рё РЅСѓР¶РЅРѕ РїРµСЂРµРґР°С‚СЊ СЃРєРѕСЂРѕСЃС‚СЊ
         if (copyVelocity)
         {
             Rigidbody newRb = newObject.GetComponent<Rigidbody>();
@@ -633,7 +668,7 @@ public class RatNavigation : MonoBehaviour
             }
         }
 
-        // Уничтожаем текущий объект
+        // РЈРЅРёС‡С‚РѕР¶Р°РµРј С‚РµРєСѓС‰РёР№ РѕР±СЉРµРєС‚
         Destroy(gameObject);
     }
 

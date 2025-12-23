@@ -1855,6 +1855,7 @@ MonoBehaviour:
   returnStoppingDistance: 0.2
   destroyAfterReturn: 1
   destroyDelay: 0.5
+  corpsePrefab: {fileID: 1120003912788379426, guid: bb1d9902d77562743a6c54fd54b44dae, type: 3}
   obstacleCheckDistance: 2
   obstacleLayerMask:
     serializedVersion: 2

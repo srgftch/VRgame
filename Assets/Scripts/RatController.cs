@@ -15,6 +15,8 @@ public class MouseCorpse : MonoBehaviour
     private bool isGrabbed = false;
     private Transform grabPoint;
     private AudioSource audioSource;
+    private bool alreadyDestroyed = false;
+
 
     void Start()
     {
@@ -79,7 +81,10 @@ public class MouseCorpse : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("MouseTrap"))
+        if (other.CompareTag("MouseTrap") && !alreadyDestroyed)
+        {
+            alreadyDestroyed = true;
             DestroyCorpse();
+        }
     }
 }
