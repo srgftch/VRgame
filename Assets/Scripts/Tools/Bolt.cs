@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections;
 
 public class Bolt : MonoBehaviour
 {
@@ -77,7 +78,7 @@ public class Bolt : MonoBehaviour
         }
     }
 
-    private System.Collections.IEnumerator MoveUpwards()
+    private IEnumerator MoveUpwards()
     {
         Vector3 startPosition = transform.position;
         Vector3 targetPosition = startPosition + Vector3.up * 100f;
@@ -121,7 +122,7 @@ public class Bolt : MonoBehaviour
         // ВЫЗЫВАЕМ СОБЫТИЕ для уведомления решетки
         OnBoltUnscrewed?.Invoke();
 
-        // Вызываем остальную логику откручивания
+        // Вызываем логику завершения откручивания
         CompleteUnscrewing();
     }
 

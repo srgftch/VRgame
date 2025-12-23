@@ -5,41 +5,64 @@ public class RatNavigation : MonoBehaviour
 {
     [Header("Navigation Settings")]
     public float moveSpeed = 2f;
-    public float rotationSpeed = 5f;
-    public float stoppingDistance = 0.5f;
+    public float rotationSpeed = 20f;
+    public float stoppingDistance = 0.1f;
 
     [Header("Target Settings")]
-    public string[] targetTags = { "Screwdriver", "Crowbar" };
+    public string[] targetTags = { "Screwdriver", "Wrench", "Key" };
     public float detectionRange = 10f;
 
-    [Header("Physics Settings")]
-    public float obstacleCheckDistance = 2f;
+    [Header("Return Settings")]
+    [SerializeField] private GameObject _returnPointObject;
+    public Vector3 returnPosition = Vector3.zero;
+    public bool useReturnPoint = true;
+    public float returnStoppingDistance = 1f;
+    public bool destroyAfterReturn = true; // НОВОЕ: уничтожать мышь после возврата
+    public float destroyDelay = 0.5f; // Задержка перед уничтожением
+
+    [Header("Obstacle Avoidance Settings")]
+    public float obstacleCheckDistance = 1.5f;
     public LayerMask obstacleLayerMask = 1;
+    public float sideRayOffset = 0.3f;
+    public float avoidRotationSpeed = 30f;
+    public float minDistanceToObstacle = 0.5f;
 
     [Header("Carry Settings")]
     public Transform carryPoint;
     public Vector3 carryOffset = new Vector3(0, 0.3f, 0);
-    public float maxCarrySize = 0.5f;
 
     [Header("Stun Settings")]
-    public float stunDuration = 4f; // Длительность оглушения в секундах
-    public ParticleSystem stunEffect; // Эффект оглушения
-    public AudioClip stunSound; // Звук оглушения
+    public float defaultStunDuration = 4f;
+    public ParticleSystem defaultStunEffect;
+    public AudioClip defaultStunSound;
 
-    private Vector3 targetPosition;
     private bool hasTarget = false;
     private Transform currentTarget;
     private Rigidbody rb;
-    private bool isAvoiding = false;
-    private float avoidTimer = 0f;
     private bool hasReachedTarget = false;
     private GameObject carriedObject;
-    private Vector3 originalScale;
+
+    // Новые переменные для системы возврата
+    private bool isReturningHome = false;
+    private bool hasReturnedHome = false;
+    private Vector3 homePosition;
 
     // Переменные для оглушения
     private bool isStunned = false;
     private float stunTimer = 0f;
     private AudioSource audioSource;
+
+    // Переменные для поиска
+    private float nextSearchTime = 0f;
+    public float searchInterval = 0.3f;
+
+    // Переменные для обхода препятствий
+    private bool isAvoiding = false;
+    private Vector3 avoidDirection;
+    private float avoidTimer = 0f;
+    private const float MAX_AVOID_TIME = 3f;
+
+    [SerializeField] private GameObject transformationPrefab;
 
     void Start()
     {
@@ -61,54 +84,109 @@ public class RatNavigation : MonoBehaviour
             CreateCarryPoint();
         }
 
-        StartCoroutine(FindToolsRoutine());
+        // Инициализация точки возврата
+        InitializeReturnPoint();
+
+        // Ищем первую цель сразу
+        FindNearestTool();
+        nextSearchTime = Time.time + searchInterval;
     }
 
+    void InitializeReturnPoint()
+    {
+        if (useReturnPoint)
+        {
+            if (_returnPointObject != null && _returnPointObject.transform != null)
+            {
+                homePosition = _returnPointObject.transform.position;
+            }
+            else
+            {
+                homePosition = returnPosition;
+
+                if (homePosition == Vector3.zero)
+                {
+                    homePosition = transform.position;
+                }
+            }
+        }
+    }
+
+    public Transform returnPoint
+    {
+        get
+        {
+            if (_returnPointObject != null)
+                return _returnPointObject.transform;
+            return null;
+        }
+        set
+        {
+            if (value != null)
+                _returnPointObject = value.gameObject;
+            else
+                _returnPointObject = null;
+        }
+    }
     void CreateCarryPoint()
     {
         GameObject carryPointObj = new GameObject("CarryPoint");
         carryPointObj.transform.SetParent(transform);
-
-        // Позиционируем точку переноски ближе к телу мыши
-        // Уменьшаем высоту и добавляем небольшое смещение вперед
         carryPointObj.transform.localPosition = new Vector3(0, 0.2f, 0.1f);
         carryPoint = carryPointObj.transform;
     }
 
+    void Update()
+    {
+        if (!hasReachedTarget && !hasTarget && !isStunned && !isReturningHome)
+        {
+            if (Time.time > nextSearchTime)
+            {
+                FindNearestTool();
+                nextSearchTime = Time.time + searchInterval;
+            }
+        }
+
+        if (isAvoiding)
+        {
+            avoidTimer += Time.deltaTime;
+            if (avoidTimer > MAX_AVOID_TIME)
+            {
+                isAvoiding = false;
+                avoidTimer = 0f;
+            }
+        }
+    }
+
     void FixedUpdate()
     {
-        // Обработка оглушения
         if (isStunned)
         {
             stunTimer -= Time.fixedDeltaTime;
+            if (rb != null) rb.velocity = Vector3.zero;
 
-            // Останавливаем движение при оглушении
-            if (rb != null)
-            {
-                rb.velocity = Vector3.zero;
-            }
+            if (stunTimer <= 0f) EndStun();
+            return;
+        }
 
-            // Проверяем, закончилось ли оглушение
-            if (stunTimer <= 0f)
-            {
-                EndStun();
-            }
+        // Если вернулись домой и уничтожились - ничего не делаем
+        if (hasReturnedHome) return;
 
-            return; // Прерываем выполнение, пока мышь оглушена
+        if (isReturningHome && carriedObject != null)
+        {
+            MoveToHome();
+            return;
         }
 
         if (hasReachedTarget)
         {
-            if (rb != null)
-            {
-                rb.velocity = Vector3.zero;
-            }
+            if (rb != null) rb.velocity = Vector3.zero;
             return;
         }
 
         if (hasTarget && currentTarget != null)
         {
-            MoveToTarget(currentTarget.position);
+            MoveToTargetDirect();
 
             float distanceToTarget = Vector3.Distance(transform.position, currentTarget.position);
             if (distanceToTarget <= stoppingDistance)
@@ -118,32 +196,223 @@ public class RatNavigation : MonoBehaviour
         }
         else
         {
-            if (rb != null)
-            {
-                rb.velocity = Vector3.zero;
-            }
+            if (rb != null) rb.velocity = Vector3.zero;
         }
+    }
+
+    void MoveToTargetDirect()
+    {
+        if (currentTarget == null) return;
+
+        Vector3 targetPos = currentTarget.position;
 
         if (isAvoiding)
         {
-            avoidTimer -= Time.fixedDeltaTime;
-            if (avoidTimer <= 0f)
+            MoveInAvoidDirection();
+            return;
+        }
+
+        if (CheckForObstaclesExcludingTarget())
+        {
+            StartAvoidance();
+            return;
+        }
+
+        MoveDirectlyToTarget(targetPos);
+    }
+
+    void MoveDirectlyToTarget(Vector3 targetPos)
+    {
+        Vector3 direction = (targetPos - transform.position).normalized;
+        direction.y = 0;
+
+        if (direction != Vector3.zero)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(direction);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+        }
+
+        if (rb != null)
+        {
+            Vector3 moveDirection = transform.forward * moveSpeed;
+            rb.velocity = new Vector3(moveDirection.x, rb.velocity.y, moveDirection.z);
+        }
+    }
+
+    bool CheckForObstaclesExcludingTarget()
+    {
+        RaycastHit hit;
+
+        if (Physics.Raycast(transform.position, transform.forward, out hit, obstacleCheckDistance, obstacleLayerMask))
+        {
+            if (!IsTargetOrCarried(hit.collider.gameObject) && hit.distance < minDistanceToObstacle)
             {
-                isAvoiding = false;
+                return true;
+            }
+        }
+
+        Vector3[] rayDirections = {
+            transform.forward + transform.right * sideRayOffset,
+            transform.forward - transform.right * sideRayOffset
+        };
+
+        foreach (Vector3 dir in rayDirections)
+        {
+            if (Physics.Raycast(transform.position, dir, out hit, obstacleCheckDistance * 0.7f, obstacleLayerMask))
+            {
+                if (!IsTargetOrCarried(hit.collider.gameObject) && hit.distance < minDistanceToObstacle)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    bool IsTargetOrCarried(GameObject obj)
+    {
+        if (currentTarget != null && obj.transform == currentTarget)
+            return true;
+
+        if (carriedObject != null && obj == carriedObject)
+            return true;
+
+        foreach (string tag in targetTags)
+        {
+            if (obj.CompareTag(tag))
+                return true;
+        }
+
+        return false;
+    }
+
+    void StartAvoidance()
+    {
+        isAvoiding = true;
+        avoidTimer = 0f;
+
+        RaycastHit hitRight, hitLeft;
+        bool rightBlocked = CheckDirectionForObstacle(transform.right, 1f);
+        bool leftBlocked = CheckDirectionForObstacle(-transform.right, 1f);
+
+        if (!rightBlocked && !leftBlocked)
+        {
+            Vector3 toTarget = (currentTarget.position - transform.position).normalized;
+            float dotRight = Vector3.Dot(transform.right, toTarget);
+            avoidDirection = dotRight > 0 ? transform.right : -transform.right;
+        }
+        else if (!rightBlocked)
+        {
+            avoidDirection = transform.right;
+        }
+        else if (!leftBlocked)
+        {
+            avoidDirection = -transform.right;
+        }
+        else
+        {
+            avoidDirection = -transform.forward;
+        }
+    }
+
+    bool CheckDirectionForObstacle(Vector3 direction, float distance)
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, direction, out hit, distance, obstacleLayerMask))
+        {
+            return !IsTargetOrCarried(hit.collider.gameObject);
+        }
+        return false;
+    }
+
+    void MoveInAvoidDirection()
+    {
+        if (avoidDirection != Vector3.zero)
+        {
+            Quaternion avoidRotation = Quaternion.LookRotation(avoidDirection);
+            transform.rotation = Quaternion.Slerp(transform.rotation, avoidRotation, avoidRotationSpeed * Time.fixedDeltaTime);
+        }
+
+        if (rb != null)
+        {
+            Vector3 moveDirection = transform.forward * moveSpeed * 0.8f;
+            rb.velocity = new Vector3(moveDirection.x, rb.velocity.y, moveDirection.z);
+        }
+
+        if (currentTarget != null)
+        {
+            Vector3 toTarget = currentTarget.position - transform.position;
+            float distanceToTarget = toTarget.magnitude;
+
+            if (!CheckForObstaclesExcludingTarget() && distanceToTarget > stoppingDistance)
+            {
+                float angleToTarget = Vector3.Angle(transform.forward, toTarget.normalized);
+                if (angleToTarget < 45f)
+                {
+                    isAvoiding = false;
+                    avoidTimer = 0f;
+                }
             }
         }
     }
 
-    IEnumerator FindToolsRoutine()
+    void MoveToHome()
     {
-        while (true)
+        float distanceToHome = Vector3.Distance(transform.position, homePosition);
+
+        if (distanceToHome <= returnStoppingDistance)
         {
-            if (!hasReachedTarget && !isStunned)
-            {
-                FindNearestTool();
-            }
-            yield return new WaitForSeconds(2f);
+            OnReachedHome();
+            return;
         }
+
+        if (isAvoiding)
+        {
+            MoveInAvoidDirection();
+        }
+        else if (CheckForObstaclesExcludingTarget())
+        {
+            StartAvoidance();
+        }
+        else
+        {
+            MoveDirectlyToTarget(homePosition);
+        }
+    }
+
+    // ИЗМЕНЕНО: Добавлено уничтожение мыши
+    void OnReachedHome()
+    {
+        if (rb != null) rb.velocity = Vector3.zero;
+        hasReturnedHome = true;
+        isReturningHome = false;
+
+        // Сначала сбрасываем предмет
+        if (carriedObject != null)
+        {
+            DropObjectAtHome();
+        }
+
+        // Затем уничтожаем мышь, если включена опция
+        if (destroyAfterReturn)
+        {
+            StartCoroutine(DestroyRat());
+        }
+    }
+
+    // НОВЫЙ метод: уничтожение мыши с задержкой
+    IEnumerator DestroyRat()
+    {
+        Debug.Log($"Мышь достигла точки возврата и будет уничтожена через {destroyDelay} сек");
+
+        // Можно добавить эффекты перед уничтожением
+        // Например, анимацию, звук, частицы
+
+        yield return new WaitForSeconds(destroyDelay);
+
+        // Уничтожаем объект мыши
+        Destroy(gameObject);
     }
 
     void FindNearestTool()
@@ -174,7 +443,6 @@ public class RatNavigation : MonoBehaviour
         {
             currentTarget = nearestTool;
             hasTarget = true;
-            Debug.Log($"Мышь нашла инструмент: {currentTarget.name}, расстояние: {nearestDistance:F2}");
         }
         else
         {
@@ -183,101 +451,36 @@ public class RatNavigation : MonoBehaviour
         }
     }
 
-    void MoveToTarget(Vector3 targetPos)
-    {
-        if (isAvoiding) return;
-
-        Vector3 direction = (targetPos - transform.position).normalized;
-        direction.y = 0;
-
-        if (direction != Vector3.zero)
-        {
-            Quaternion targetRotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
-        }
-
-        if (rb != null)
-        {
-            Vector3 moveDirection = transform.forward * moveSpeed;
-            rb.velocity = new Vector3(moveDirection.x, rb.velocity.y, moveDirection.z);
-        }
-
-        CheckForObstacles();
-    }
-
-    void CheckForObstacles()
-    {
-        RaycastHit hit;
-
-        Vector3[] rayDirections = {
-            transform.forward,
-            transform.forward + transform.right * 0.3f,
-            transform.forward - transform.right * 0.3f
-        };
-
-        foreach (Vector3 dir in rayDirections)
-        {
-            if (Physics.Raycast(transform.position, dir, out hit, obstacleCheckDistance, obstacleLayerMask))
-            {
-                if (!IsTool(hit.collider.gameObject))
-                {
-                    AvoidObstacle(hit.normal);
-                    return;
-                }
-            }
-        }
-    }
-
-    void AvoidObstacle(Vector3 obstacleNormal)
-    {
-        isAvoiding = true;
-        avoidTimer = 1f;
-
-        Vector3 avoidDirection = Vector3.Reflect(transform.forward, obstacleNormal).normalized;
-
-        Quaternion avoidRotation = Quaternion.LookRotation(avoidDirection);
-        transform.rotation = Quaternion.Slerp(transform.rotation, avoidRotation, rotationSpeed * 2f * Time.fixedDeltaTime);
-
-        if (rb != null)
-        {
-            Vector3 moveDirection = transform.forward * moveSpeed * 0.5f;
-            rb.velocity = new Vector3(moveDirection.x, rb.velocity.y, moveDirection.z);
-        }
-    }
-
-    bool IsTool(GameObject obj)
-    {
-        foreach (string tag in targetTags)
-        {
-            if (obj.CompareTag(tag)) return true;
-        }
-        return false;
-    }
-
     void OnReachedTarget()
     {
         if (currentTarget != null)
         {
-            Debug.Log($"Мышь достигла {currentTarget.name} и поднимает его");
-
             PickUpObject(currentTarget.gameObject);
 
-            if (rb != null)
-            {
-                rb.velocity = Vector3.zero;
-            }
-
+            if (rb != null) rb.velocity = Vector3.zero;
             hasReachedTarget = true;
             hasTarget = false;
+            isAvoiding = false;
 
-            PlaySuccessEffects();
+            if (useReturnPoint && carriedObject != null)
+            {
+                StartReturningHome();
+            }
         }
+    }
+
+    void StartReturningHome()
+    {
+        if (!useReturnPoint) return;
+
+        isReturningHome = true;
+        hasReturnedHome = false;
+        isAvoiding = false;
     }
 
     void PickUpObject(GameObject obj)
     {
         carriedObject = obj;
-        originalScale = obj.transform.localScale;
 
         Rigidbody toolRb = obj.GetComponent<Rigidbody>();
         if (toolRb != null)
@@ -287,40 +490,49 @@ public class RatNavigation : MonoBehaviour
         }
 
         Collider toolCollider = obj.GetComponent<Collider>();
-        if (toolCollider != null)
-        {
-            toolCollider.enabled = false;
-        }
+        if (toolCollider != null) toolCollider.enabled = false;
 
-        MonoBehaviour[] interactables = obj.GetComponents<MonoBehaviour>();
-        foreach (MonoBehaviour interactable in interactables)
-        {
-            if (interactable.GetType().Name.Contains("Interactable"))
-            {
-                interactable.enabled = false;
-            }
-        }
-
-        // Устанавливаем родителя, но НЕ используем локальную позицию
         obj.transform.SetParent(carryPoint);
-
-        // Сбрасываем локальную позицию к нулю, чтобы объект был точно в точке carryPoint
-        obj.transform.localPosition = Vector3.zero;
-
-        // Применяем смещение относительно точки переноски
         obj.transform.localPosition = carryOffset;
-
-        // Сбрасываем поворот
         obj.transform.localRotation = Quaternion.identity;
+    }
 
-        Debug.Log($"Инструмент {obj.name} поднят. Позиция: {obj.transform.position}, локальная позиция: {obj.transform.localPosition}");
+    void DropObjectAtHome()
+    {
+        if (carriedObject != null)
+        {
+            // Без рандомного смещения - кладем аккуратно
+            Vector3 dropPosition = homePosition;
+
+            // Проверяем землю под точкой
+            RaycastHit hit;
+            if (Physics.Raycast(dropPosition + Vector3.up * 2f, Vector3.down, out hit, 5f))
+            {
+                dropPosition = hit.point + Vector3.up * 0.05f; // Чуть выше земли
+            }
+
+            Rigidbody toolRb = carriedObject.GetComponent<Rigidbody>();
+            if (toolRb != null)
+            {
+                toolRb.isKinematic = false;
+                toolRb.useGravity = true;
+                toolRb.velocity = Vector3.zero;
+                toolRb.angularVelocity = Vector3.zero;
+            }
+
+            Collider toolCollider = carriedObject.GetComponent<Collider>();
+            if (toolCollider != null) toolCollider.enabled = true;
+
+            carriedObject.transform.SetParent(null);
+            carriedObject.transform.position = dropPosition;
+            carriedObject = null;
+        }
     }
 
     public void DropObject()
     {
         if (carriedObject != null)
         {
-            // Сохраняем текущую позицию инструмента (на спине мыши)
             Vector3 dropPosition = carriedObject.transform.position;
 
             Rigidbody toolRb = carriedObject.GetComponent<Rigidbody>();
@@ -328,126 +540,101 @@ public class RatNavigation : MonoBehaviour
             {
                 toolRb.isKinematic = false;
                 toolRb.useGravity = true;
-
-                // Сбрасываем скорость, чтобы предмет падал естественно
                 toolRb.velocity = Vector3.zero;
                 toolRb.angularVelocity = Vector3.zero;
             }
 
             Collider toolCollider = carriedObject.GetComponent<Collider>();
-            if (toolCollider != null)
-            {
-                toolCollider.enabled = true;
-            }
+            if (toolCollider != null) toolCollider.enabled = true;
 
-            MonoBehaviour[] interactables = carriedObject.GetComponents<MonoBehaviour>();
-            foreach (MonoBehaviour interactable in interactables)
-            {
-                if (interactable.GetType().Name.Contains("Interactable"))
-                {
-                    interactable.enabled = true;
-                }
-            }
-
-            // Отключаем родителя, оставляя объект на текущей позиции
             carriedObject.transform.SetParent(null);
-
-            // Устанавливаем позицию сброса - там же, где он был на спине мыши
             carriedObject.transform.position = dropPosition;
-
-            Debug.Log($"Инструмент {carriedObject.name} сброшен с позиции: {dropPosition}");
             carriedObject = null;
+
+            if (isReturningHome)
+            {
+                isReturningHome = false;
+                hasReturnedHome = false;
+            }
         }
     }
 
-    // Метод для оглушения мыши
-    public void Stun(float duration = 0f)
+    public void Stun(float duration = 0f, ParticleSystem customEffect = null, AudioClip customSound = null)
     {
-        if (isStunned) return; // Уже оглушена
+        if (isStunned) return;
 
-        // Если длительность не указана, используем значение по умолчанию
-        if (duration <= 0f)
-        {
-            duration = stunDuration;
-        }
-
+        float finalDuration = duration > 0 ? duration : defaultStunDuration;
         isStunned = true;
-        stunTimer = duration;
+        stunTimer = finalDuration;
 
-        // Останавливаем движение
-        if (rb != null)
-        {
-            rb.velocity = Vector3.zero;
-        }
-
-        // Сбрасываем цели
+        if (rb != null) rb.velocity = Vector3.zero;
         hasTarget = false;
         hasReachedTarget = false;
+        isReturningHome = false;
+        isAvoiding = false;
 
-        // Если несла инструмент - сбрасываем его
-        if (carriedObject != null)
-        {
-            DropObject();
-        }
+        if (carriedObject != null) DropObject();
 
-        // Запускаем эффекты оглушения
-        PlayStunEffects();
+        if (customEffect != null)
+            StartCoroutine(PlayEffect(customEffect));
+        else if (defaultStunEffect != null)
+            defaultStunEffect.Play();
 
-        Debug.Log($"Мышь оглушена на {duration} секунд!");
+        if (customSound != null && audioSource != null)
+            audioSource.PlayOneShot(customSound);
+        else if (defaultStunSound != null && audioSource != null)
+            audioSource.PlayOneShot(defaultStunSound);
+    }
+
+    IEnumerator PlayEffect(ParticleSystem effect)
+    {
+        ParticleSystem instance = Instantiate(effect, transform.position, Quaternion.identity);
+        instance.transform.SetParent(transform);
+        yield return new WaitForSeconds(effect.main.duration);
+        if (instance != null) Destroy(instance.gameObject);
     }
 
     void EndStun()
     {
         isStunned = false;
         stunTimer = 0f;
-
-        // Останавливаем эффекты оглушения
-        if (stunEffect != null)
-        {
-            stunEffect.Stop();
-        }
-
-        Debug.Log("Мышь пришла в себя!");
+        if (defaultStunEffect != null) defaultStunEffect.Stop();
     }
 
-    void PlaySuccessEffects()
+    public void TransformIntoObject(GameObject newObjectPrefab = null, bool copyVelocity = false)
     {
-        // Эффекты при поднятии инструмента
-    }
+        GameObject prefabToUse = newObjectPrefab != null ? newObjectPrefab : transformationPrefab;
 
-    void PlayStunEffects()
-    {
-        // Звук оглушения
-        if (stunSound != null && audioSource != null)
+        if (prefabToUse == null)
         {
-            audioSource.PlayOneShot(stunSound);
+            Debug.LogError("TransformIntoObject: No prefab specified!");
+            return;
         }
 
-        // Визуальный эффект оглушения
-        if (stunEffect != null)
-        {
-            stunEffect.Play();
-        }
-    }
+        Vector3 position = transform.position;
+        Quaternion rotation = transform.rotation;
+        Vector3 velocity = Vector3.zero;
 
-    // Обработка столкновения с ломом
-    void OnCollisionEnter(Collision collision)
-    {
-        // Проверяем, что столкнулись с ломом
-        if (collision.gameObject.CompareTag("Crowbar"))
+        if (rb != null && copyVelocity)
         {
-            // Оглушаем мышь
-            Stun();
+            velocity = rb.velocity;
         }
-    }
 
-    // Альтернативный вариант с триггером (если коллайдер лома - триггер)
-    void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Crowbar"))
+        // Создаем новый объект
+        GameObject newObject = Instantiate(prefabToUse, position, rotation);
+
+        // Если нужно передать скорость
+        if (copyVelocity)
         {
-            Stun();
+            Rigidbody newRb = newObject.GetComponent<Rigidbody>();
+            if (newRb != null)
+            {
+                newRb.velocity = velocity;
+            }
         }
+
+        // Уничтожаем текущий объект
+        Destroy(gameObject);
     }
 
     void OnDrawGizmosSelected()
@@ -455,44 +642,34 @@ public class RatNavigation : MonoBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, detectionRange);
 
-        if (hasTarget && currentTarget != null)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawLine(transform.position, currentTarget.position);
-
-            Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(currentTarget.position, stoppingDistance);
-        }
-
         Gizmos.color = Color.blue;
-        Vector3[] rayDirections = {
-            transform.forward,
-            transform.forward + transform.right * 0.3f,
-            transform.forward - transform.right * 0.3f
-        };
+        Gizmos.DrawRay(transform.position, transform.forward * obstacleCheckDistance);
+        Gizmos.DrawRay(transform.position, (transform.forward + transform.right * sideRayOffset) * obstacleCheckDistance * 0.7f);
+        Gizmos.DrawRay(transform.position, (transform.forward - transform.right * sideRayOffset) * obstacleCheckDistance * 0.7f);
 
-        foreach (Vector3 dir in rayDirections)
-        {
-            Gizmos.DrawRay(transform.position, dir * obstacleCheckDistance);
-        }
-
-        if (hasReachedTarget)
+        if (useReturnPoint)
         {
             Gizmos.color = Color.magenta;
-            Gizmos.DrawWireSphere(transform.position, 0.5f);
+            Vector3 drawHomePosition = _returnPointObject != null ? _returnPointObject.transform.position :
+                                      (returnPosition != Vector3.zero ? returnPosition : homePosition);
+            Gizmos.DrawWireSphere(drawHomePosition, returnStoppingDistance);
         }
 
-        if (carryPoint != null)
+        if (hasTarget && currentTarget != null)
         {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireCube(carryPoint.position, Vector3.one * 0.1f);
+            Gizmos.color = Color.green;
+            Gizmos.DrawLine(transform.position, currentTarget.position);
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(currentTarget.position, 0.2f);
         }
 
-        // Показываем состояние оглушения
-        if (isStunned)
+        if (isAvoiding)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(transform.position, 0.7f);
+            Gizmos.DrawRay(transform.position, avoidDirection * 1f);
         }
+
+        Gizmos.color = new Color(1, 0.5f, 0, 0.3f);
+        Gizmos.DrawWireSphere(transform.position, minDistanceToObstacle);
     }
 }

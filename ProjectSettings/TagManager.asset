@@ -8,6 +8,14 @@ TagManager:
   - Crowbar
   - Robo parts
   - Screwdriver
+  - Head
+  - ArmR
+  - ArmL
+  - LegR
+  - LegL
+  - Wrench
+  - Key
+  - MouseCorpse
   layers:
   - Default
   - TransparentFX
