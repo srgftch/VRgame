@@ -1045,47 +1045,47 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -9176501952243523488, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -2.3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -9176501952243523488, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.2895
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -9176501952243523488, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -2.503
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -9176501952243523488, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.7022489
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -9176501952243523488, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -9176501952243523488, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.7119315
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -9176501952243523488, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -9176501952243523488, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 90.785
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.8924078
+      value: 2.27
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.076
+      value: 0.093
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.7274611
+      value: -2.167
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1093,7 +1093,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.000000021855694
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalRotation.y
@@ -1101,7 +1101,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: aa270a7cc9db05b4fbc1450f518cf907, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -2576,7 +2576,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8298045291338814965, guid: 77e7c27b2c5525e4aa8cc9f99d654486, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.513
       objectReference: {fileID: 0}
     - target: {fileID: 8298045291338814965, guid: 77e7c27b2c5525e4aa8cc9f99d654486, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2613,6 +2613,14 @@ PrefabInstance:
     - target: {fileID: 8298045291338814966, guid: 77e7c27b2c5525e4aa8cc9f99d654486, type: 3}
       propertyPath: m_Name
       value: Complete XR Origin Set Up Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 8404871649812681847, guid: 77e7c27b2c5525e4aa8cc9f99d654486, type: 3}
+      propertyPath: m_CameraYOffset
+      value: 1.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 8404871649812681847, guid: 77e7c27b2c5525e4aa8cc9f99d654486, type: 3}
+      propertyPath: m_RequestedTrackingOriginMode
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2985,10 +2993,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f16f5a131b777f34dad884239c880661, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactForceMultiplier: 1.5
-  minImpactVelocity: 2
-  hitSounds: []
-  hitParticles: {fileID: 0}
 --- !u!1 &345870358
 GameObject:
   m_ObjectHideFlags: 0
@@ -3042,7 +3046,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2267d8639f05c6a41aca16137997c0df, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.809
+      value: 0.757
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2267d8639f05c6a41aca16137997c0df, type: 3}
       propertyPath: m_LocalPosition.y
@@ -3050,7 +3054,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2267d8639f05c6a41aca16137997c0df, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.335
+      value: 1.73
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2267d8639f05c6a41aca16137997c0df, type: 3}
       propertyPath: m_LocalRotation.w
@@ -3977,10 +3981,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7e294b4fe810de4a938a0141e021dc0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unscrewDistance: 0.1
-  rotationsToUnscrew: 5
-  enableGravityWhenUnscrewed: 1
-  becomePhysicalWhenUnscrewed: 1
 --- !u!4 &468702703 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3621279984713105056, guid: 23371e66c7e8f174492549759ee383aa, type: 3}
@@ -4827,10 +4827,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f16f5a131b777f34dad884239c880661, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactForceMultiplier: 1.5
-  minImpactVelocity: 2
-  hitSounds: []
-  hitParticles: {fileID: 0}
 --- !u!114 &574314411
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5217,10 +5213,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f16f5a131b777f34dad884239c880661, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactForceMultiplier: 1.5
-  minImpactVelocity: 2
-  hitSounds: []
-  hitParticles: {fileID: 0}
 --- !u!64 &643597515
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -6989,10 +6981,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f16f5a131b777f34dad884239c880661, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  impactForceMultiplier: 1.5
-  minImpactVelocity: 2
-  hitSounds: []
-  hitParticles: {fileID: 0}
 --- !u!1 &1005679779 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8934777400606672865, guid: 48cf42559baaf994a8220455d0922100, type: 3}
@@ -11125,10 +11113,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7e294b4fe810de4a938a0141e021dc0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unscrewDistance: 0.1
-  rotationsToUnscrew: 5
-  enableGravityWhenUnscrewed: 1
-  becomePhysicalWhenUnscrewed: 1
 --- !u!4 &1640927203 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3621279984713105056, guid: 23371e66c7e8f174492549759ee383aa, type: 3}
@@ -12756,10 +12740,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7e294b4fe810de4a938a0141e021dc0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unscrewDistance: 0.1
-  rotationsToUnscrew: 5
-  enableGravityWhenUnscrewed: 1
-  becomePhysicalWhenUnscrewed: 1
 --- !u!4 &1894217776 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3621279984713105056, guid: 23371e66c7e8f174492549759ee383aa, type: 3}
@@ -14599,10 +14579,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7e294b4fe810de4a938a0141e021dc0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unscrewDistance: 0.1
-  rotationsToUnscrew: 5
-  enableGravityWhenUnscrewed: 1
-  becomePhysicalWhenUnscrewed: 1
 --- !u!1 &2078192050 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -259972160606440404, guid: ba2f1c3ab89e6d14db6a238873a04a2f, type: 3}
